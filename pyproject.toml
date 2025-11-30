@@ -1,0 +1,10 @@
+[project]
+name = "scrape-llms-txt"
+version = "0.1.0"
+description = "Downloads markdown files listed in https://<sitename>/llms.txt"
+readme = "README.md"
+authors = [
+    { name = "Praveen Chamarthi", email = "1090396+praveenc@users.noreply.github.com" }
+]
+requires-python = ">=3.13.9"
+dependencies = []
