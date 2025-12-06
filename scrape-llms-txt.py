@@ -21,7 +21,7 @@ import sys
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from loguru import logger
@@ -98,9 +98,7 @@ def parse_llms_txt(txt: str) -> ParsedLLMSTxt:
     # Parse header - handle both with and without summary
     # Pattern with optional summary (blockquote)
     pat_with_summary = (
-        r"^#\s*(?P<title>.+?$)\n+"
-        r"(?:^>\s*(?P<summary>.+?$)\n+)?"
-        r"(?P<info>.*)"
+        r"^#\s*(?P<title>.+?$)\n+" r"(?:^>\s*(?P<summary>.+?$)\n+)?" r"(?P<info>.*)"
     )
 
     match = re.search(pat_with_summary, start.strip(), re.MULTILINE | re.DOTALL)
@@ -208,6 +206,24 @@ class LLMSTxtScraper:
         filename = filename.replace("/", "_").replace("\\", "_")
         return filename
 
+    def _resolve_url(self, url: URLString) -> URLString:
+        """
+        Resolve relative URLs against the llms.txt source URL when possible.
+
+        Args:
+            url: Raw URL from llms.txt
+
+        Returns:
+            Absolute URL if resolvable, otherwise the original URL
+        """
+        if url.startswith(("http://", "https://")):
+            return url
+
+        if self.llms_txt_url.startswith(("http://", "https://")):
+            return urljoin(self.llms_txt_url, url)
+
+        return url
+
     async def _fetch_llms_txt(self) -> str:
         """
         Fetch the llms.txt content from URL or file.
@@ -263,8 +279,9 @@ class LLMSTxtScraper:
             #     continue
 
             for link in links:
-                url = link.get("url", "")
-                if url:
+                raw_url = link.get("url", "")
+                if raw_url:
+                    url = self._resolve_url(raw_url)
                     domain = self._extract_domain(url)
                     filename = self._extract_filename(url)
                     urls.append((url, domain, filename))
